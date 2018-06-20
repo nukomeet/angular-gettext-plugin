@@ -20,38 +20,20 @@ function compile(options) {
     format: options.format
   });
 
-  const filePaths = glob.sync(options.input)
-  const outputs = filePaths.map( (filePath) => {
-    const content = fs.readFileSync(filePath, options.encoding || 'utf-8');
-    const fullFileName = path.basename(filePath);
-    return {
-      content: compiler.convertPo([content]),
-      fileName: path.basename(filePath, path.extname(fullFileName)) + '.' + options.format
-    };
-  } );
+  const filePaths = glob.sync(options.input);
+  const output = compiler.convertPo(filePaths.map(fn => fs.readFileSync(fn, 'utf-8')));
 
-  return outputs;
+  return output;
 }
 
 AngularGetTextPlugin.prototype.apply = function(compiler) {
   const options = this;
 
   compiler.plugin('emit', (compilation, done) => {
-
     if (options.compileTranslations) {
-      const results = compile(options.compileTranslations);
-      results.forEach( (result) => {
-        const { fileName, content } = result;
-        const outPath = path.join(options.compileTranslations.outputFolder, fileName);
-        compilation.assets[outPath] = {
-          source: function() {
-            return content;
-          },
-          size: function() {
-            return content.length;
-          }
-        };
-      } );
+      const result = compile(options.compileTranslations);
+      console.log(options);
+      fs.writeFileSync(options.compileTranslations.dest, result);
     }
 
     if (options.extractStrings) {
@@ -59,8 +41,8 @@ AngularGetTextPlugin.prototype.apply = function(compiler) {
 
       const filePaths = glob.sync(options.extractStrings.input)
       filePaths.forEach( (fileName) => {
-          var content = fs.readFileSync(fileName, 'utf8');
-          extractor.parse(fileName, content);
+        var content = fs.readFileSync(fileName, 'utf8');
+        extractor.parse(fileName, content);
       });
       fs.writeFileSync(options.extractStrings.destination, extractor.toString())
     }
